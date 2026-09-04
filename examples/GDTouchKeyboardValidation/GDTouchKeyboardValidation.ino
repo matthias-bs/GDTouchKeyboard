@@ -20,6 +20,7 @@
 struct ConfigurationEntry
 {
   const char *name;
+  const char *prompt;
   const char *description;
   uint16_t minimumLength;
   uint16_t maximumLength;
@@ -72,15 +73,15 @@ static bool isHex(const String& candidate)
 
 static const ConfigurationEntry configuration[] =
 {
-  {"Text", "letters, numbers, symbols, 4-12 characters", 4, 12,
+  {"Text", "Text (4-12 chars)", "letters, numbers, symbols, 4-12 characters", 4, 12,
    (1 << GDTouchKeyboard::KEY_MODE_LETTER) |
    (1 << GDTouchKeyboard::KEY_MODE_NUMBER),
    GDTouchKeyboard::KEY_MODE_LETTER, nullptr},
-  {"Name", "a-z, A-Z, '-' or '_'", 1, 32,
+  {"Name", "Name (a-z, A-Z, -/_, max 32 chars)", "a-z, A-Z, '-' or '_'", 1, 32,
     (1 << GDTouchKeyboard::KEY_MODE_LETTER) |
     (1 << GDTouchKeyboard::KEY_MODE_NUMBER),
    GDTouchKeyboard::KEY_MODE_LETTER, isLettersAndSeparators},
-  {"Hex value", "exactly 8 digits: 0-9, A-F", 8, 8,
+  {"Hex value", "Hex value (8 hex digits)", "exactly 8 digits: 0-9, A-F", 8, 8,
    1 << GDTouchKeyboard::KEY_MODE_HEX,
    GDTouchKeyboard::KEY_MODE_HEX, isHex},
 };
@@ -270,7 +271,7 @@ static String readConfigurationEntry(size_t entryIndex)
   GDTK.setInputValidator(entry.validator);
   return GDTK.run(configurationValues[entryIndex], 0x0ad9,
                  true, &fonts::Font0, entry.initialMode, true,
-                 entry.name);
+                 entry.prompt);
 }
 
 /**
