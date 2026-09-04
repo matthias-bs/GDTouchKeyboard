@@ -14,6 +14,7 @@ Additional changes:
 
 - Ported the library and example to M5Unified and M5GFX.
 - Added hexadecimal mode in addition to letter and number keyboard modes.
+- Added MAC address mode with automatic colon insertion and optional separator preservation in the returned value.
 - Added mode masks to restrict the available keyboard modes.
 - Added minimum and maximum input-length limits.
 - Added caller-supplied input validation callbacks.

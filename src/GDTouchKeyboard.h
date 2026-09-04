@@ -17,6 +17,7 @@ public:
     KEY_MODE_LETTER = 0,
     KEY_MODE_NUMBER = 1,
     KEY_MODE_HEX = 2,
+    KEY_MODE_MAC = 3,
   } key_mode_t;
 
   typedef bool (*input_validator_t)(const String& candidate);
@@ -27,7 +28,8 @@ public:
   String run(String text = "", uint16_t setColourIn = 0x0ad9,
              bool getIsEditable = true,
              const lgfx::v1::IFont* fontIn = &fonts::Font0,
-             key_mode_t modeIn = KEY_MODE_LETTER);
+             key_mode_t modeIn = KEY_MODE_LETTER,
+             bool preserveMacSeparators = true);
   void setMode(key_mode_t modeIn);
   void setAvailableModes(uint8_t modeMask);
   void setInputLength(uint16_t minLength, uint16_t maxLength = 0);
@@ -96,6 +98,8 @@ private:
   void _drawKeyboard(void);
   bool _isValidInput(const String& candidate, bool complete) const;
   void _startTouchFeedback(void);
+  String _formatMacInput(const String& value) const;
+  String _stripMacSeparators(const String& value) const;
 
 
 
@@ -116,6 +120,7 @@ private:
   input_validator_t _input_validator = nullptr;
   bool _touch_feedback = false;
   uint32_t _vibration_stop_at = 0;
+  bool _preserve_mac_separators = true;
 };
 
 extern GDTouchKeyboard GDTK;

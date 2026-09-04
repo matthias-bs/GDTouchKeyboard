@@ -14,16 +14,22 @@ GDTouchKeyboard::~GDTouchKeyboard()
 String GDTouchKeyboard::run(String text, uint16_t setColourIn,
                             bool getIsEditable,
                             const lgfx::v1::IFont* fontIn,
-                            key_mode_t modeIn)
+                            key_mode_t modeIn,
+                            bool preserveMacSeparators)
 {
   isEditable = getIsEditable;
   font = fontIn;
+  _preserve_mac_separators = preserveMacSeparators;
   themeColor = setColourIn;
   _initKeyboard(text);
   setMode(modeIn);
+  if (_key_mode == KEY_MODE_MAC)
+  {
+    _input_text = _stripMacSeparators(_input_text);
+  }
+  promptText = _input_text;
   _drawKeyboard();
   _keyboard_done = false;
-  promptText = text;
   while(_keyboard_done == false)
   {
     M5.update();
@@ -50,6 +56,10 @@ String GDTouchKeyboard::run(String text, uint16_t setColourIn,
   M5.Power.setVibration(0);
   _vibration_stop_at = 0;
   _deinitKeyboard();
+  if (_key_mode == KEY_MODE_MAC && _preserve_mac_separators)
+  {
+    return _formatMacInput(_input_text);
+  }
   return _input_text;
 }
 
@@ -57,7 +67,7 @@ void GDTouchKeyboard::setMode(key_mode_t modeIn)
 {
   if ((_available_modes & (1 << modeIn)) == 0)
   {
-    for (uint8_t mode = KEY_MODE_LETTER; mode <= KEY_MODE_HEX; mode++)
+    for (uint8_t mode = KEY_MODE_LETTER; mode <= KEY_MODE_MAC; mode++)
     {
       if ((_available_modes & (1 << mode)) != 0)
       {
@@ -72,12 +82,13 @@ void GDTouchKeyboard::setMode(key_mode_t modeIn)
 
 void GDTouchKeyboard::setAvailableModes(uint8_t modeMask)
 {
-  _available_modes = modeMask & ((1 << (KEY_MODE_HEX + 1)) - 1);
+  _available_modes = modeMask & ((1 << (KEY_MODE_MAC + 1)) - 1);
   if (_available_modes == 0)
   {
     _available_modes = (1 << KEY_MODE_LETTER) |
                        (1 << KEY_MODE_NUMBER) |
-                       (1 << KEY_MODE_HEX);
+                       (1 << KEY_MODE_HEX) |
+                       (1 << KEY_MODE_MAC);
   }
   setMode(_key_mode);
 }
@@ -127,13 +138,37 @@ void GDTouchKeyboard::_startTouchFeedback()
   }
 }
 
+String GDTouchKeyboard::_formatMacInput(const String& value) const
+{
+  String formatted;
+  formatted.reserve(value.length() + (value.length() / 2));
+  for (size_t index = 0; index < value.length(); ++index)
+  {
+    if (index != 0 && (index % 2) == 0)
+    {
+      formatted += ':';
+    }
+    formatted += value[index];
+  }
+  return formatted;
+}
+
+String GDTouchKeyboard::_stripMacSeparators(const String& value) const
+{
+  String stripped = value;
+  stripped.replace(":", "");
+  return stripped;
+}
+
 void GDTouchKeyboard::_updateInputText()
 {
   M5.Display.setFont(font);
   M5.Display.setTextSize(1);
   M5.Display.setTextDatum(TL_DATUM);
 
-  String visibleText = _input_text;
+  String visibleText = _key_mode == KEY_MODE_MAC
+                          ? _formatMacInput(_input_text)
+                          : _input_text;
   const int cursorWidth = 15;
   const int availableWidth = M5.Display.width() - cursorWidth - 2;
   while (visibleText.length() > 0 &&
@@ -182,9 +217,10 @@ void GDTouchKeyboard::_deinitKeyboard()
 
 void GDTouchKeyboard::_drawKeyboard()
 {
-  const int visibleCols = _key_mode == KEY_MODE_HEX ? 4 : COLS;
+  const int visibleCols = (_key_mode == KEY_MODE_HEX ||
+                           _key_mode == KEY_MODE_MAC) ? 4 : COLS;
 
-  if (_key_mode == KEY_MODE_HEX)
+  if (_key_mode == KEY_MODE_HEX || _key_mode == KEY_MODE_MAC)
   {
     M5.Display.fillRect(KEYBOARD_X + (visibleCols * KEY_W), KEYBOARD_Y,
                         (COLS - visibleCols) * KEY_W, ROWS * KEY_H, TFT_BLACK);
@@ -200,8 +236,10 @@ void GDTouchKeyboard::_drawKeyboard()
       int key_page = 0;
 
           if(_key_mode == KEY_MODE_NUMBER) key_page += 2;
-          else if(_key_mode == KEY_MODE_HEX) key_page += 4;
-          if(_shift_mode == true && _key_mode != KEY_MODE_HEX) key_page += 1;
+          else if(_key_mode == KEY_MODE_HEX || _key_mode == KEY_MODE_MAC)
+            key_page += 4;
+           if(_shift_mode == true && _key_mode != KEY_MODE_HEX &&
+             _key_mode != KEY_MODE_MAC) key_page += 1;
 
       String key;
       char ch = keymap[key_page][r][c];
@@ -261,9 +299,9 @@ void GDTouchKeyboard::_processInput()
   }
   else if (M5.BtnC.wasClicked())
   {
-    for (uint8_t offset = 1; offset <= 3; offset++)
+    for (uint8_t offset = 1; offset <= 4; offset++)
     {
-      const uint8_t mode = (static_cast<uint8_t>(_key_mode) + offset) % 3;
+      const uint8_t mode = (static_cast<uint8_t>(_key_mode) + offset) % 4;
       if ((_available_modes & (1 << mode)) != 0)
       {
         _key_mode = static_cast<key_mode_t>(mode);
@@ -286,7 +324,8 @@ void GDTouchKeyboard::_processInput()
     return;
   }
 
-  const int visibleCols = _key_mode == KEY_MODE_HEX ? 4 : COLS;
+  const int visibleCols = (_key_mode == KEY_MODE_HEX ||
+                           _key_mode == KEY_MODE_MAC) ? 4 : COLS;
   for (int r = 0; r < ROWS; r++)
   {
     for (int c = 0; c < visibleCols; c++)
@@ -301,7 +340,8 @@ void GDTouchKeyboard::_processInput()
 
       int key_page = 0;
       if (_key_mode == KEY_MODE_NUMBER) key_page += 2;
-      else if (_key_mode == KEY_MODE_HEX) key_page += 4;
+      else if (_key_mode == KEY_MODE_HEX || _key_mode == KEY_MODE_MAC)
+        key_page += 4;
       if (_shift_mode && _key_mode != KEY_MODE_HEX) key_page += 1;
 
       const char ch = keymap[key_page][r][c];
