@@ -20,6 +20,7 @@ Additional changes:
 - Added caller-supplied input validation callbacks.
 - Added optional tactile feedback for touch input.
 - Added the `GDTouchKeyboardValidation` example, demonstrating validated configuration entries, mode restrictions, physical-button navigation, and tactile feedback.
+- Added the `GDTouchKeyboardMac` example, demonstrating fixed-length MAC address entry with tactile feedback.
 
 ## Screenshot Capture
 
