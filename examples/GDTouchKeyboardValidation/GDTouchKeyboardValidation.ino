@@ -10,6 +10,10 @@
  * @license MIT
  */
 
+#ifndef GDTOUCHKEYBOARD_ENABLE_SCREENSHOT
+#define GDTOUCHKEYBOARD_ENABLE_SCREENSHOT 1
+#endif
+
 #include <M5Unified.h>
 #include <GDTouchKeyboard.h>
 
@@ -84,6 +88,40 @@ static const ConfigurationEntry configuration[] =
 static const size_t configurationCount = sizeof(configuration) / sizeof(configuration[0]);
 static String configurationValues[configurationCount];
 static const bool configurationTouchFeedback = true;
+
+#if GDTOUCHKEYBOARD_ENABLE_SCREENSHOT
+/**
+ * @brief Send the current display contents as a PNG over Serial.
+ *
+ * The frame consists of the `PNG1` marker, a little-endian 32-bit payload
+ * length, and the PNG bytes. This can be received by tools/capture_screenshot.py.
+ */
+static void sendScreenshot()
+{
+  if (!M5.Display.isReadable())
+  {
+    Serial.println("SCREENSHOT_ERROR");
+    return;
+  }
+
+  size_t pngLength = 0;
+  void *pngData = M5.Display.createPng(
+      &pngLength, 0, 0, M5.Display.width(), M5.Display.height());
+  if (pngData == nullptr)
+  {
+    Serial.println("SCREENSHOT_ERROR");
+    return;
+  }
+
+  Serial.write("PNG1", 4);
+  const uint32_t payloadLength = static_cast<uint32_t>(pngLength);
+  Serial.write(reinterpret_cast<const uint8_t *>(&payloadLength),
+               sizeof(payloadLength));
+  Serial.write(static_cast<const uint8_t *>(pngData), pngLength);
+  Serial.flush();
+  M5.Display.releasePngMemory();
+}
+#endif
 
 /**
  * @brief Provide optional tactile feedback for an overview button action.
@@ -186,6 +224,9 @@ static size_t showConfigurationOverview(size_t selectedEntry)
   while (true)
   {
     M5.update();
+#if GDTOUCHKEYBOARD_ENABLE_SCREENSHOT
+    GDTK.processScreenshotRequest();
+#endif
     if (M5.BtnA.wasClicked())
     {
       provideConfigurationTouchFeedback();
@@ -238,6 +279,9 @@ void setup()
 {
   M5.begin();
   Serial.begin(115200);
+#if GDTOUCHKEYBOARD_ENABLE_SCREENSHOT
+  GDTK.setScreenshotHandler(sendScreenshot);
+#endif
 }
 
 /**

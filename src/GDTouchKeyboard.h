@@ -21,6 +21,7 @@ public:
   } key_mode_t;
 
   typedef bool (*input_validator_t)(const String& candidate);
+  typedef void (*screenshot_handler_t)(void);
 
   GDTouchKeyboard();
   ~GDTouchKeyboard();
@@ -35,6 +36,8 @@ public:
   void setInputLength(uint16_t minLength, uint16_t maxLength = 0);
   void setInputValidator(input_validator_t validator);
   void setTouchFeedback(bool enabled);
+  void setScreenshotHandler(screenshot_handler_t handler);
+  void processScreenshotRequest(void);
 
 private:
 
@@ -121,6 +124,7 @@ private:
   bool _touch_feedback = false;
   uint32_t _vibration_stop_at = 0;
   bool _preserve_mac_separators = true;
+  screenshot_handler_t _screenshot_handler = nullptr;
 };
 
 extern GDTouchKeyboard GDTK;
