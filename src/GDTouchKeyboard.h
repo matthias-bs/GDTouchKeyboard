@@ -4,27 +4,35 @@
 #ifndef _GDTOUCHKEYBOARD_H_
 #define _GDTOUCHKEYBOARD_H_
 
-#include <M5Core2.h>
-#include <Free_Fonts.h>
+#include <M5Unified.h>
 
 
 
-
-void _btnAEvent(Event& e);
-void _buttonEvent(Event& e);
-
-class GDTouchKeyboard;
 
 class GDTouchKeyboard
 {
 public:
+  typedef enum
+  {
+    KEY_MODE_LETTER = 0,
+    KEY_MODE_NUMBER = 1,
+    KEY_MODE_HEX = 2,
+  } key_mode_t;
+
+  typedef bool (*input_validator_t)(const String& candidate);
+
   GDTouchKeyboard();
   ~GDTouchKeyboard();
 
-  String run(String text = "",uint16_t setColourIn = 0x0ad9, bool getIsEditable = true, const GFXfont fontIn = FreeMonoBold9pt7b);
-
-  friend void _btnAEvent(Event& e);
-  friend void _buttonEvent(Event& e);
+  String run(String text = "", uint16_t setColourIn = 0x0ad9,
+             bool getIsEditable = true,
+             const lgfx::v1::IFont* fontIn = &fonts::Font0,
+             key_mode_t modeIn = KEY_MODE_LETTER);
+  void setMode(key_mode_t modeIn);
+  void setAvailableModes(uint8_t modeMask);
+  void setInputLength(uint16_t minLength, uint16_t maxLength = 0);
+  void setInputValidator(input_validator_t validator);
+  void setTouchFeedback(bool enabled);
 
 private:
 
@@ -37,7 +45,7 @@ private:
   #define COLS (7)
   #define ROWS (4)
 
-  #define MAX_SHIFT_MODE (4)
+  #define MAX_SHIFT_MODE (6)
 
   const char keymap[MAX_SHIFT_MODE][ROWS][COLS] =
   {
@@ -65,27 +73,33 @@ private:
     {'}', '|', ':', '"', '<', '>', '?'},
     {' ', ' ', ' ', ' ', ' ', ' ', '\002'}, // 002 = shift
     },
+    {
+    {'0', '1', '2', '3', '\001', '\001', '\001'},
+    {'4', '5', '6', '7', '\001', '\001', '\001'},
+    {'8', '9', 'A', 'B', '\001', '\001', '\001'},
+    {'C', 'D', 'E', 'F', '\001', '\001', '\001'},
+    },
+    {
+    {'0', '1', '2', '3', '\001', '\001', '\001'},
+    {'4', '5', '6', '7', '\001', '\001', '\001'},
+    {'8', '9', 'A', 'B', '\001', '\001', '\001'},
+    {'C', 'D', 'E', 'F', '\001', '\001', '\001'},
+    },
   };
 
 
 
+  void _processInput(void);
   void _updateInputText(void);
   void _initKeyboard(String text = "");
   void _deinitKeyboard(void);
   void _drawKeyboard(void);
+  bool _isValidInput(const String& candidate, bool complete) const;
+  void _startTouchFeedback(void);
 
 
 
-  typedef enum
-  {
-    KEY_MODE_LETTER = 0,
-    KEY_MODE_NUMBER = 1,
-  } key_mode_t;
-
-  ButtonColors _bc_on;
-  ButtonColors _bc_off;
   uint16_t themeColor = 0x0ad9;
-  Button *_button_list[ROWS][COLS];
   String _input_text = "";
   String _old_input_text = "";
   key_mode_t _key_mode = KEY_MODE_LETTER;
@@ -93,9 +107,15 @@ private:
   bool _keyboard_done = false;
   uint32_t _cursor_last;
   bool _cursor_state = false;
-  GFXfont font;
+  const lgfx::v1::IFont* font = &fonts::Font0;
   bool isEditable = false;
   String promptText = "";
+  uint8_t _available_modes = 0x07;
+  uint16_t _minimum_length = 0;
+  uint16_t _maximum_length = 0;
+  input_validator_t _input_validator = nullptr;
+  bool _touch_feedback = false;
+  uint32_t _vibration_stop_at = 0;
 };
 
 extern GDTouchKeyboard GDTK;
