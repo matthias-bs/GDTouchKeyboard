@@ -15,7 +15,8 @@ String GDTouchKeyboard::run(String text, uint16_t setColourIn,
                             bool getIsEditable,
                             const lgfx::v1::IFont* fontIn,
                             key_mode_t modeIn,
-                            bool preserveMacSeparators)
+                            bool preserveMacSeparators,
+                            String prompt)
 {
   isEditable = getIsEditable;
   font = fontIn;
@@ -28,6 +29,7 @@ String GDTouchKeyboard::run(String text, uint16_t setColourIn,
     _input_text = _stripMacSeparators(_input_text);
   }
   promptText = _input_text;
+  _prompt_text = prompt;
   _drawKeyboard();
   _keyboard_done = false;
   while(_keyboard_done == false)
@@ -187,6 +189,11 @@ void GDTouchKeyboard::_updateInputText()
   String visibleText = _key_mode == KEY_MODE_MAC
                           ? _formatMacInput(_input_text)
                           : _input_text;
+  const bool showingPrompt = visibleText.length() == 0 && _prompt_text.length() > 0;
+  if (showingPrompt)
+  {
+    visibleText = _prompt_text;
+  }
   const int cursorWidth = 15;
   const int availableWidth = M5.Display.width() - cursorWidth - 2;
   while (visibleText.length() > 0 &&
@@ -197,8 +204,10 @@ void GDTouchKeyboard::_updateInputText()
 
   const int visibleWidth = M5.Display.textWidth(visibleText);
   M5.Display.fillRect(0, 0, M5.Display.width(), KEYBOARD_Y - 1, TFT_BLACK);
+  M5.Display.setTextColor(showingPrompt ? TFT_DARKGREY : TFT_WHITE, TFT_BLACK);
   M5.Display.drawString(visibleText, 0, 10);
-  if (_cursor_state == true)
+  M5.Display.setTextColor(TFT_WHITE, TFT_BLACK);
+  if (_cursor_state == true && !showingPrompt)
   {
     M5.Display.fillRect(visibleWidth + 2, 2, cursorWidth,
                        KEYBOARD_Y - 6, themeColor);

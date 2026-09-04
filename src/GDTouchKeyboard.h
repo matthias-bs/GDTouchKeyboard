@@ -12,6 +12,7 @@
 class GDTouchKeyboard
 {
 public:
+  /** Keyboard layouts supported by the library. */
   typedef enum
   {
     KEY_MODE_LETTER = 0,
@@ -20,23 +21,70 @@ public:
     KEY_MODE_MAC = 3,
   } key_mode_t;
 
+  /** Callback used to accept or reject a candidate input string. */
   typedef bool (*input_validator_t)(const String& candidate);
+
+  /** Callback used to send a screenshot when requested over Serial. */
   typedef void (*screenshot_handler_t)(void);
 
+  /** Create a touch keyboard instance. */
   GDTouchKeyboard();
+
+  /** Release resources owned by the touch keyboard instance. */
   ~GDTouchKeyboard();
 
+  /**
+   * @brief Show the keyboard and wait until the user accepts the input.
+   *
+   * The prompt is displayed as placeholder text while the input is empty. It
+   * is not included in the returned value and is replaced by user input.
+   *
+   * @param text Initial input value.
+   * @param setColourIn 16-bit RGB565 colour used for keyboard controls.
+   * @param getIsEditable If true, the initial value can be edited and deleted.
+   * @param fontIn Font used to render the keyboard and input.
+   * @param modeIn Initial keyboard mode. Falls back to an available mode when
+   * the requested mode is disabled.
+   * @param preserveMacSeparators Return MAC addresses with colon separators.
+   * @param prompt Optional placeholder text shown above the keyboard.
+   * @return The value accepted by the user.
+   */
   String run(String text = "", uint16_t setColourIn = 0x0ad9,
              bool getIsEditable = true,
              const lgfx::v1::IFont* fontIn = &fonts::Font0,
              key_mode_t modeIn = KEY_MODE_LETTER,
-             bool preserveMacSeparators = true);
+             bool preserveMacSeparators = true,
+             String prompt = "");
+
+  /** Set the active keyboard mode. */
   void setMode(key_mode_t modeIn);
+
+  /**
+   * @brief Restrict the modes available through the Mode button.
+   *
+   * Each bit in modeMask corresponds to the numeric value of a key_mode_t.
+   * A zero mask restores all supported modes.
+   */
   void setAvailableModes(uint8_t modeMask);
+
+  /**
+   * @brief Set input length limits.
+   *
+   * A maximum length of zero disables the upper limit. The minimum length is
+   * checked when the user presses Done.
+   */
   void setInputLength(uint16_t minLength, uint16_t maxLength = 0);
+
+  /** Set a callback used to validate input as it is entered and on completion. */
   void setInputValidator(input_validator_t validator);
+
+  /** Enable or disable vibration feedback for touch input. */
   void setTouchFeedback(bool enabled);
+
+  /** Set the callback used to answer serial screenshot requests. */
   void setScreenshotHandler(screenshot_handler_t handler);
+
+  /** Process pending serial screenshot requests. */
   void processScreenshotRequest(void);
 
 private:
@@ -117,6 +165,7 @@ private:
   const lgfx::v1::IFont* font = &fonts::Font0;
   bool isEditable = false;
   String promptText = "";
+  String _prompt_text = "";
   uint8_t _available_modes = 0x07;
   uint16_t _minimum_length = 0;
   uint16_t _maximum_length = 0;

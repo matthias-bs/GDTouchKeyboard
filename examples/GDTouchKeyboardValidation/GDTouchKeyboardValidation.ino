@@ -269,7 +269,8 @@ static String readConfigurationEntry(size_t entryIndex)
   GDTK.setInputLength(entry.minimumLength, entry.maximumLength);
   GDTK.setInputValidator(entry.validator);
   return GDTK.run(configurationValues[entryIndex], 0x0ad9,
-                 true, &fonts::Font0, entry.initialMode);
+                 true, &fonts::Font0, entry.initialMode, true,
+                 entry.name);
 }
 
 /**
