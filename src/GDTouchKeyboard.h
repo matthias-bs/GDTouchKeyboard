@@ -4,27 +4,88 @@
 #ifndef _GDTOUCHKEYBOARD_H_
 #define _GDTOUCHKEYBOARD_H_
 
-#include <M5Core2.h>
-#include <Free_Fonts.h>
+#include <M5Unified.h>
 
 
 
-
-void _btnAEvent(Event& e);
-void _buttonEvent(Event& e);
-
-class GDTouchKeyboard;
 
 class GDTouchKeyboard
 {
 public:
+  /** Keyboard layouts supported by the library. */
+  typedef enum
+  {
+    KEY_MODE_LETTER = 0,
+    KEY_MODE_NUMBER = 1,
+    KEY_MODE_HEX = 2,
+    KEY_MODE_MAC = 3,
+  } key_mode_t;
+
+  /** Callback used to accept or reject a candidate input string. */
+  typedef bool (*input_validator_t)(const String& candidate);
+
+  /** Callback used to send a screenshot when requested over Serial. */
+  typedef void (*screenshot_handler_t)(void);
+
+  /** Create a touch keyboard instance. */
   GDTouchKeyboard();
+
+  /** Release resources owned by the touch keyboard instance. */
   ~GDTouchKeyboard();
 
-  String run(String text = "",uint16_t setColourIn = 0x0ad9, bool getIsEditable = true, const GFXfont fontIn = FreeMonoBold9pt7b);
+  /**
+   * @brief Show the keyboard and wait until the user accepts the input.
+   *
+   * The prompt is displayed as placeholder text while the input is empty. It
+   * is not included in the returned value and is replaced by user input.
+   *
+   * @param text Initial input value.
+   * @param setColourIn 16-bit RGB565 colour used for keyboard controls.
+   * @param getIsEditable If true, the initial value can be edited and deleted.
+   * @param fontIn Font used to render the keyboard and input.
+   * @param modeIn Initial keyboard mode. Falls back to an available mode when
+   * the requested mode is disabled.
+   * @param preserveMacSeparators Return MAC addresses with colon separators.
+   * @param prompt Optional placeholder text shown above the keyboard.
+   * @return The value accepted by the user.
+   */
+  String run(String text = "", uint16_t setColourIn = 0x0ad9,
+             bool getIsEditable = true,
+             const lgfx::v1::IFont* fontIn = &fonts::Font0,
+             key_mode_t modeIn = KEY_MODE_LETTER,
+             bool preserveMacSeparators = true,
+             String prompt = "");
 
-  friend void _btnAEvent(Event& e);
-  friend void _buttonEvent(Event& e);
+  /** Set the active keyboard mode. */
+  void setMode(key_mode_t modeIn);
+
+  /**
+   * @brief Restrict the modes available through the Mode button.
+   *
+   * Each bit in modeMask corresponds to the numeric value of a key_mode_t.
+   * A zero mask restores all supported modes.
+   */
+  void setAvailableModes(uint8_t modeMask);
+
+  /**
+   * @brief Set input length limits.
+   *
+   * A maximum length of zero disables the upper limit. The minimum length is
+   * checked when the user presses Done.
+   */
+  void setInputLength(uint16_t minLength, uint16_t maxLength = 0);
+
+  /** Set a callback used to validate input as it is entered and on completion. */
+  void setInputValidator(input_validator_t validator);
+
+  /** Enable or disable vibration feedback for touch input. */
+  void setTouchFeedback(bool enabled);
+
+  /** Set the callback used to answer serial screenshot requests. */
+  void setScreenshotHandler(screenshot_handler_t handler);
+
+  /** Process pending serial screenshot requests. */
+  void processScreenshotRequest(void);
 
 private:
 
@@ -37,7 +98,7 @@ private:
   #define COLS (7)
   #define ROWS (4)
 
-  #define MAX_SHIFT_MODE (4)
+  #define MAX_SHIFT_MODE (6)
 
   const char keymap[MAX_SHIFT_MODE][ROWS][COLS] =
   {
@@ -65,27 +126,35 @@ private:
     {'}', '|', ':', '"', '<', '>', '?'},
     {' ', ' ', ' ', ' ', ' ', ' ', '\002'}, // 002 = shift
     },
+    {
+    {'0', '1', '2', '3', '\001', '\001', '\001'},
+    {'4', '5', '6', '7', '\001', '\001', '\001'},
+    {'8', '9', 'A', 'B', '\001', '\001', '\001'},
+    {'C', 'D', 'E', 'F', '\001', '\001', '\001'},
+    },
+    {
+    {'0', '1', '2', '3', '\001', '\001', '\001'},
+    {'4', '5', '6', '7', '\001', '\001', '\001'},
+    {'8', '9', 'A', 'B', '\001', '\001', '\001'},
+    {'C', 'D', 'E', 'F', '\001', '\001', '\001'},
+    },
   };
 
 
 
+  void _processInput(void);
   void _updateInputText(void);
   void _initKeyboard(String text = "");
   void _deinitKeyboard(void);
   void _drawKeyboard(void);
+  bool _isValidInput(const String& candidate, bool complete) const;
+  void _startTouchFeedback(void);
+  String _formatMacInput(const String& value) const;
+  String _stripMacSeparators(const String& value) const;
 
 
 
-  typedef enum
-  {
-    KEY_MODE_LETTER = 0,
-    KEY_MODE_NUMBER = 1,
-  } key_mode_t;
-
-  ButtonColors _bc_on;
-  ButtonColors _bc_off;
   uint16_t themeColor = 0x0ad9;
-  Button *_button_list[ROWS][COLS];
   String _input_text = "";
   String _old_input_text = "";
   key_mode_t _key_mode = KEY_MODE_LETTER;
@@ -93,9 +162,18 @@ private:
   bool _keyboard_done = false;
   uint32_t _cursor_last;
   bool _cursor_state = false;
-  GFXfont font;
+  const lgfx::v1::IFont* font = &fonts::Font0;
   bool isEditable = false;
   String promptText = "";
+  String _prompt_text = "";
+  uint8_t _available_modes = 0x07;
+  uint16_t _minimum_length = 0;
+  uint16_t _maximum_length = 0;
+  input_validator_t _input_validator = nullptr;
+  bool _touch_feedback = false;
+  uint32_t _vibration_stop_at = 0;
+  bool _preserve_mac_separators = true;
+  screenshot_handler_t _screenshot_handler = nullptr;
 };
 
 extern GDTouchKeyboard GDTK;
