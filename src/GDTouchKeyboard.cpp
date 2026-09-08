@@ -31,7 +31,7 @@ String GDTouchKeyboard::run(String text, uint16_t setColourIn,
   promptText = _input_text;
   _prompt_text = prompt;
   _drawKeyboard();
-  _keyboard_done = false;
+  _updateInputText();
   while(_keyboard_done == false)
   {
     M5.update();
