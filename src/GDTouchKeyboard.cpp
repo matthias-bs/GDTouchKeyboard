@@ -369,7 +369,7 @@ void GDTouchKeyboard::_processInput()
       if (_key_mode == KEY_MODE_NUMBER) key_page += 2;
       else if (_key_mode == KEY_MODE_HEX || _key_mode == KEY_MODE_MAC)
         key_page += 4;
-      if (_shift_mode && _key_mode != KEY_MODE_HEX) key_page += 1;
+      if (_shift_mode && _key_mode != KEY_MODE_HEX && _key_mode != KEY_MODE_MAC) key_page += 1;
 
       const char ch = keymap[key_page][r][c];
       _startTouchFeedback();
